@@ -73,7 +73,7 @@ By default this serves an OpenAI-compatible API at `http://localhost:8000/api/v1
 **2. Clone this repo and install dependencies.**
 
 ```bash
-git clone https://github.com/<your-username>/lemonrag.git
+git clone https://github.com/aarav-malviya9/lemonrag
 cd lemonrag
 pip install -r requirements.txt
 ```
