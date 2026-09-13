@@ -1,3 +1,7 @@
+
+
+Uploading i_want_you_to_create_a_tutoria.mp4…
+
 # 🍋 LemonRAG
 
 **A fully local, private RAG chat assistant for your own documents — powered end-to-end by [Lemonade Server](https://github.com/lemonade-sdk/lemonade), AMD's local-first LLM runtime.**
