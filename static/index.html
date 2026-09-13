@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LemonRAG</title>
+<style>
+  :root {
+    --bg: #FFFDF7;
+    --ink: #1F2417;
+    --ink-soft: #55604A;
+    --lemon: #F4C430;
+    --lemon-deep: #C99A00;
+    --leaf: #6B8F71;
+    --line: #E8E0C8;
+    --bubble-user: #F4C430;
+    --bubble-bot: #F3F0E2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 0 20px;
+  }
+
+  header {
+    padding: 28px 4px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .wedge {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 21px;
+    font-weight: 650;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 14px;
+    max-width: 320px;
+    line-height: 1.6;
+  }
+
+  .row {
+    display: flex;
+  }
+  .row.user { justify-content: flex-end; }
+  .row.bot { justify-content: flex-start; }
+
+  .bubble {
+    max-width: 78%;
+    padding: 11px 15px;
+    border-radius: 14px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .row.user .bubble {
+    background: var(--bubble-user);
+    color: #2B2205;
+    border-bottom-right-radius: 4px;
+  }
+  .row.bot .bubble {
+    background: var(--bubble-bot);
+    border-bottom-left-radius: 4px;
+  }
+
+  .sources {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .sources span {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 9px;
+    margin: 3px 4px 0 0;
+  }
+
+  .thinking {
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    font-style: italic;
+  }
+
+  form {
+    display: flex;
+    gap: 10px;
+    padding: 16px 4px 22px;
+    border-top: 1px solid var(--line);
+  }
+
+  input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-family: inherit;
+    background: white;
+    color: var(--ink);
+  }
+  input[type="text"]:focus {
+    outline: 2px solid var(--lemon-deep);
+    outline-offset: 1px;
+    border-color: var(--lemon-deep);
+  }
+
+  button {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--lemon-deep); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .row { animation: rise 0.18s ease-out; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <svg class="wedge" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 6 A44 44 0 0 1 94 50 L50 50 Z" fill="#F4C430"/>
+      <path d="M50 6 A44 44 0 0 0 6 50 L50 50 Z" fill="#E3B41E"/>
+      <path d="M6 50 A44 44 0 0 0 94 50 Z" fill="#FBE58C"/>
+      <circle cx="50" cy="50" r="3.2" fill="#6B8F71"/>
+    </svg>
+    <div>
+      <h1>LemonRAG</h1>
+      <p>Local documents, answered locally — via Lemonade</p>
+    </div>
+  </header>
+
+  <div class="messages" id="messages">
+    <div class="empty-state" id="empty-state">
+      Ask a question about the documents in your <code>documents/</code> folder.
+      Everything runs on this machine — nothing is sent anywhere else.
+    </div>
+  </div>
+
+  <form id="chat-form">
+    <input type="text" id="question" placeholder="Ask about your documents…" autocomplete="off" />
+    <button type="submit" id="send-btn">Ask</button>
+  </form>
+</div>
+
+<script>
+  const form = document.getElementById('chat-form');
+  const input = document.getElementById('question');
+  const messages = document.getElementById('messages');
+  const emptyState = document.getElementById('empty-state');
+  const sendBtn = document.getElementById('send-btn');
+
+  function addRow(role, content) {
+    if (emptyState) emptyState.remove();
+    const row = document.createElement('div');
+    row.className = 'row ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = content;
+    row.appendChild(bubble);
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+    return bubble;
+  }
+
+  function addSources(bubble, sources) {
+    if (!sources || sources.length === 0) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'sources';
+    sources.forEach(s => {
+      const tag = document.createElement('span');
+      tag.textContent = s.split('/').pop();
+      wrap.appendChild(tag);
+    });
+    bubble.parentElement.appendChild(wrap);
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+
+    addRow('user', question);
+    input.value = '';
+    sendBtn.disabled = true;
+
+    const thinkingBubble = addRow('bot', '');
+    thinkingBubble.classList.add('thinking');
+    thinkingBubble.textContent = 'Thinking…';
+
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+      const data = await res.json();
+      thinkingBubble.classList.remove('thinking');
+      thinkingBubble.textContent = data.answer;
+      addSources(thinkingBubble, data.sources);
+    } catch (err) {
+      thinkingBubble.classList.remove('thinking');
+      thinkingBubble.textContent = 'Something went wrong reaching the server: ' + err.message;
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  });
+</script>
+</body>
+</html>

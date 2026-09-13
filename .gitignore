@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+index.pkl
+benchmark_report.md
+documents/*
+!documents/.gitkeep
