@@ -1,0 +1,4 @@
+Who created Git and in what year?
+What are the three main states that files can reside in within Git?
+What colour were the eyes of the creature in Frankenstein?
+quit

@@ -8,14 +8,8 @@ from rag import LemonRAG
 
 app = FastAPI(title="LemonRAG")
 
-_rag = None
-
-
-def get_rag():
-    global _rag
-    if _rag is None:
-        _rag = LemonRAG()
-    return _rag
+# Simple module-level instantiation - creates singleton on import
+_rag = LemonRAG()
 
 
 class Query(BaseModel):
@@ -25,12 +19,9 @@ class Query(BaseModel):
 @app.post("/api/ask")
 def ask(query: Query):
     try:
-        rag = get_rag()
+        return _rag.answer(query.question)
     except FileNotFoundError as e:
         return {"answer": str(e), "sources": []}
-
-    try:
-        return rag.answer(query.question)
     except Exception as e:
         return {
             "answer": f"Error talking to Lemonade Server: {e}. Is it running?",
@@ -49,4 +40,4 @@ def index():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8085)

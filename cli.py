@@ -16,6 +16,11 @@ def main():
         rag = LemonRAG()
     except FileNotFoundError as e:
         console.print(f"[red]{e}[/red]")
+        console.print("[dim]Run 'python ingest.py' to create the index first.[/dim]")
+        return
+    except Exception as e:
+        console.print(f"[red]Failed to initialize LemonRAG: {e}[/red]")
+        console.print("[dim]Check your configuration and try again.[/dim]")
         return
 
     console.print("[dim]Type a question, or 'quit' to exit.[/dim]\n")
@@ -33,8 +38,12 @@ def main():
 
         try:
             result = rag.answer(query)
+        except FileNotFoundError as e:
+            console.print(f"[red]Index file not found: {e}[/red]")
+            console.print("[dim]Run 'python ingest.py' to create the index first.[/dim]")
+            continue
         except Exception as e:
-            console.print(f"[red]Error talking to Lemonade Server: {e}[/red]")
+            console.print(f"[red]Error processing query: {e}[/red]")
             console.print(
                 "[dim]Is Lemonade Server running? Try: lemonade run "
                 f"{config.LEMONADE_MODEL}[/dim]"

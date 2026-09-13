@@ -65,7 +65,8 @@ def benchmark_model(client, model, prompts, repeats):
                 continue
 
             tps = tokens / total if total > 0 else 0
-            ttfts.append(ttft or 0)
+            if ttft is not None:
+                ttfts.append(ttft)
             totals.append(total)
             tps_list.append(tps)
             print(
@@ -78,10 +79,10 @@ def benchmark_model(client, model, prompts, repeats):
 
     return {
         "model": model,
-        "avg_ttft": statistics.mean(ttfts),
-        "avg_total": statistics.mean(totals),
-        "avg_tps": statistics.mean(tps_list),
-        "p50_total": statistics.median(totals),
+        "avg_ttft": statistics.mean(ttfts) if ttfts else 0.0,
+        "avg_total": statistics.mean(totals) if totals else 0.0,
+        "avg_tps": statistics.mean(tps_list) if tps_list else 0.0,
+        "p50_total": statistics.median(totals) if totals else 0.0,
         "runs": len(totals),
     }
 

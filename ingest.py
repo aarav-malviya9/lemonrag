@@ -5,8 +5,9 @@ plain scikit-learn so the pipeline works offline out of the box. Swap in a
 local embedding model later for better retrieval quality (see README roadmap).
 """
 import os
-import pickle
+import json
 import sys
+import numpy as np
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from rich.console import Console
@@ -63,6 +64,14 @@ def load_documents(documents_dir: str):
 
 def chunk_text(text: str, chunk_size: int, overlap: int):
     """Simple sliding-window character chunker."""
+    # Validate parameters to prevent infinite loops
+    if chunk_size <= 0:
+        raise ValueError(f"CHUNK_SIZE must be positive, got {chunk_size}")
+    if overlap < 0:
+        raise ValueError(f"CHUNK_OVERLAP must be non-negative, got {overlap}")
+    if overlap >= chunk_size:
+        raise ValueError(f"CHUNK_OVERLAP ({overlap}) must be less than CHUNK_SIZE ({chunk_size})")
+
     chunks = []
     start = 0
     text = text.replace("\r\n", "\n")
@@ -94,16 +103,47 @@ def build_index():
     vectorizer = TfidfVectorizer(stop_words="english", max_features=50_000)
     matrix = vectorizer.fit_transform(all_chunks)
 
-    with open(config.INDEX_PATH, "wb") as f:
-        pickle.dump(
-            {
-                "vectorizer": vectorizer,
-                "matrix": matrix,
-                "chunks": all_chunks,
-                "sources": all_sources,
-            },
-            f,
-        )
+    import json
+    import numpy as np
+
+    # Convert vectorizer and matrix to JSON-serializable format
+    # Handle stop_words which might be None or a set
+    stop_words = vectorizer.stop_words
+    if stop_words is not None:
+        stop_words = list(stop_words)
+
+    # Convert vocabulary values from numpy types to Python int
+    vocabulary = {k: int(v) for k, v in vectorizer.vocabulary_.items()}
+
+    vectorizer_data = {
+        "stop_words": stop_words,
+        "max_features": int(vectorizer.max_features) if vectorizer.max_features is not None else None,
+        "vocabulary": vocabulary,
+        "idf": [float(x) for x in vectorizer.idf_.tolist()]
+    }
+
+    # Convert sparse matrix to CSC format for efficient column slicing if needed, but we'll use CSR
+    # Ensure matrix is in CSR format
+    if not hasattr(matrix, "format") or matrix.format != "csr":
+        matrix = matrix.tocsr()
+
+    # Explicitly convert numpy types to Python native types
+    matrix_data = {
+        "data": [float(x) for x in np.asarray(matrix.data).tolist()],
+        "indices": [int(x) for x in np.asarray(matrix.indices).tolist()],
+        "indptr": [int(x) for x in np.asarray(matrix.indptr).tolist()],
+        "shape": [int(x) for x in np.asarray(matrix.shape).tolist()]
+    }
+
+    data_to_save = {
+        "vectorizer": vectorizer_data,
+        "matrix": matrix_data,
+        "chunks": all_chunks,
+        "sources": all_sources
+    }
+
+    with open(config.INDEX_PATH, "w") as f:
+        json.dump(data_to_save, f)
 
     console.print(
         f"\n[bold green]Indexed {len(all_chunks)} chunks from "

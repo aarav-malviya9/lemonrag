@@ -1,8 +1,11 @@
 """Core retrieval + generation logic, shared by cli.py and app.py."""
 import os
-import pickle
+import json
+import numpy as np
+from scipy import sparse
 
 from openai import OpenAI
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 import config
@@ -22,11 +25,28 @@ class LemonRAG:
                 f"No index found at '{index_path}'. Run `python ingest.py` first."
             )
 
-        with open(index_path, "rb") as f:
-            data = pickle.load(f)
+        with open(index_path, "r") as f:
+            data = json.load(f)
 
-        self.vectorizer = data["vectorizer"]
-        self.matrix = data["matrix"]
+        # Reconstruct vectorizer
+        vectorizer_data = data["vectorizer"]
+        vectorizer = TfidfVectorizer(
+            stop_words=vectorizer_data["stop_words"],
+            max_features=vectorizer_data["max_features"],
+            vocabulary=vectorizer_data["vocabulary"]
+        )
+        # Manually set the idf_ attribute
+        vectorizer.idf_ = np.array(vectorizer_data["idf"], dtype=np.float64)
+
+        # Reconstruct matrix
+        matrix_data = data["matrix"]
+        matrix = sparse.csr_matrix(
+            (matrix_data["data"], matrix_data["indices"], matrix_data["indptr"]),
+            shape=matrix_data["shape"]
+        )
+
+        self.vectorizer = vectorizer
+        self.matrix = matrix
         self.chunks = data["chunks"]
         self.sources = data["sources"]
 
@@ -36,7 +56,7 @@ class LemonRAG:
         )
 
     def retrieve(self, query: str, top_k: int = None):
-        top_k = top_k or config.TOP_K
+        top_k = top_k if top_k is not None else config.TOP_K
         query_vec = self.vectorizer.transform([query])
         scores = cosine_similarity(query_vec, self.matrix)[0]
         ranked = scores.argsort()[::-1][:top_k]
