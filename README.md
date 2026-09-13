@@ -1,6 +1,12 @@
 
 
-Uploading i_want_you_to_create_a_tutoria.mp4…
+
+https://github.com/user-attachments/assets/dd885ce4-fb24-41dc-a92e-aa64fd0ac295
+
+
+
+
+
 
 # 🍋 LemonRAG
 
